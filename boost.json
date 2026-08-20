@@ -1,0 +1,8 @@
+{
+    "agents": [
+        "amp"
+    ],
+    "mcp": true,
+    "nightwatch": false,
+    "sail": false
+}
