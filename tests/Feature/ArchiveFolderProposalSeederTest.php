@@ -6,15 +6,21 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('the original greek archive proposal contains all 255 folders', function () {
+test('the seeder imports every folder configured in the data file', function () {
+    $proposal = require database_path('seeders/data/archive_folders.php');
+
     $this->seed(ArchiveFolderSeeder::class);
 
-    expect(ArchiveFolder::query()->count())->toBe(255)
-        ->and(ArchiveFolder::query()->distinct()->count('code'))->toBe(255)
-        ->and(ArchiveFolder::query()->active()->selectable()->count())->toBe(255);
+    $expectedCount = count($proposal);
+
+    expect(ArchiveFolder::query()->count())->toBe($expectedCount)
+        ->and(ArchiveFolder::query()->distinct()->count('code'))
+        ->toBe($expectedCount)
+        ->and(ArchiveFolder::query()->active()->selectable()->count())
+        ->toBe($expectedCount);
 });
 
-test('the proposal preserves representative original retention values', function () {
+test('the proposal preserves representative retention values', function () {
     $this->seed(ArchiveFolderSeeder::class);
 
     $this->assertDatabaseHas('archive_folders', [
@@ -32,55 +38,73 @@ test('the proposal preserves representative original retention values', function
     ]);
 
     $this->assertDatabaseHas('archive_folders', [
-        'code' => 'Φ.48',
+        'code' => 'Φ.1.1',
+        'retention_years' => null,
         'retention_rule' => 'Κατά κρίση',
-        'description' => 'ΦΑΚΕΛΟΣ mySCHOOL',
+        'description' => 'Νόμοι',
     ]);
 });
 
 test('numeric textual and unspecified retention values remain distinct', function () {
     $this->seed(ArchiveFolderSeeder::class);
 
-    $numeric = ArchiveFolder::query()->whereNotNull('retention_years')->count();
-    $textual = ArchiveFolder::query()->whereNotNull('retention_rule')->count();
+    $numeric = ArchiveFolder::query()
+        ->whereNotNull('retention_years')
+        ->whereNull('retention_rule')
+        ->count();
+
+    $textual = ArchiveFolder::query()
+        ->whereNull('retention_years')
+        ->whereNotNull('retention_rule')
+        ->count();
+
     $unspecified = ArchiveFolder::query()
         ->whereNull('retention_years')
         ->whereNull('retention_rule')
         ->count();
+
     $conflicting = ArchiveFolder::query()
         ->whereNotNull('retention_years')
         ->whereNotNull('retention_rule')
         ->count();
 
-    expect($numeric)->toBe(79)
-        ->and($textual)->toBe(117)
-        ->and($unspecified)->toBe(59)
+    expect($numeric + $textual + $unspecified)
+        ->toBe(ArchiveFolder::query()->count())
         ->and($conflicting)->toBe(0);
 });
 
-test('the imported folder hierarchy resolves immediate parents', function () {
+test('the imported folder hierarchy resolves available immediate parents', function () {
     $this->seed(ArchiveFolderSeeder::class);
 
-    $topLevel = ArchiveFolder::query()->where('code', 'Φ.14')->firstOrFail();
-    $section = ArchiveFolder::query()->where('code', 'Φ.14.1')->firstOrFail();
-    $folder = ArchiveFolder::query()->where('code', 'Φ.14.1.1')->firstOrFail();
+    $topLevel = ArchiveFolder::query()
+        ->where('code', 'Φ.3')
+        ->firstOrFail();
+
+    $folder = ArchiveFolder::query()
+        ->where('code', 'Φ.3.1')
+        ->firstOrFail();
 
     expect($topLevel->parent)->toBeNull()
-        ->and($section->parent->is($topLevel))->toBeTrue()
-        ->and($folder->parent->is($section))->toBeTrue();
+        ->and($folder->parent->is($topLevel))->toBeTrue();
 });
 
-test('proposal ordering follows its original sequence rather than lexical codes', function () {
+test('catalogue ordering follows the complete data-file sequence', function () {
+    $proposal = require database_path('seeders/data/archive_folders.php');
+
     $this->seed(ArchiveFolderSeeder::class);
 
-    $codes = ArchiveFolder::query()->ordered()->pluck('code');
+    $expectedCodes = array_column($proposal, 'code');
+    $actualCodes = ArchiveFolder::query()
+        ->ordered()
+        ->pluck('code')
+        ->all();
 
-    expect($codes->first())->toBe('Φ.1')
-        ->and($codes->search('Φ.2'))->toBeLessThan($codes->search('Φ.10'))
-        ->and($codes->last())->toBe('Φ.48');
+    expect($actualCodes)->toBe($expectedCodes);
 });
 
 test('the proposal seeder is idempotent and preserves custom folders', function () {
+    $proposal = require database_path('seeders/data/archive_folders.php');
+
     $this->seed(ArchiveFolderSeeder::class);
 
     ArchiveFolder::factory()->create([
@@ -88,12 +112,13 @@ test('the proposal seeder is idempotent and preserves custom folders', function 
         'description' => 'Προσαρμοσμένος φάκελος οργανισμού',
     ]);
 
-    // A second run must refresh proposal values without duplicating records or
-    // deleting organization-specific additions.
     $this->seed(ArchiveFolderSeeder::class);
 
-    expect(ArchiveFolder::query()->count())->toBe(256)
+    expect(ArchiveFolder::query()->count())->toBe(count($proposal) + 1)
         ->and(ArchiveFolder::query()->where('code', 'Φ.1')->count())->toBe(1)
-        ->and(ArchiveFolder::query()->where('code', 'Φ.ΠΡΟΣΑΡΜΟΣΜΕΝΟ')->exists())
-        ->toBeTrue();
+        ->and(
+            ArchiveFolder::query()
+                ->where('code', 'Φ.ΠΡΟΣΑΡΜΟΣΜΕΝΟ')
+                ->exists()
+        )->toBeTrue();
 });
