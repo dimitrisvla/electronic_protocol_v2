@@ -157,4 +157,12 @@ return [
         'remarks' => null,
     ],
 
+    [
+        'code' => 'Φ.4.3',
+        'retention_years' => 5,
+        'retention_rule' => null,
+        'description' => 'Έπιπλα και εξοπλισμός σχολείων',
+        'remarks' => null,
+    ],
+
 ];
