@@ -664,6 +664,23 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Protocol Registration Receipt
+    |--------------------------------------------------------------------------
+    |
+    | Display a printer-friendly registration receipt for one active protocol.
+    | The surrounding auth middleware requires a signed-in user, while the
+    | controller applies ProtocolPolicy's view permission. Normal route model
+    | binding excludes protocols that are currently in the recycle bin.
+    |
+    */
+    Route::get(
+        '/protocols/{protocol}/receipt',
+        [ProtocolController::class, 'receipt']
+    )->name('protocols.receipt');
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Standard Protocol CRUD Routes
     |--------------------------------------------------------------------------
     */

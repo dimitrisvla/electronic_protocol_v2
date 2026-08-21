@@ -605,6 +605,39 @@ class ProtocolController extends Controller
 
     /*
     |--------------------------------------------------------------------------
+    | Display a Protocol Registration Receipt
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Display a printer-friendly receipt for one active protocol.
+     *
+     * HTTP method: GET
+     * URL: /protocols/{protocol}/receipt
+     * Route name: protocols.receipt
+     *
+     * The receipt is a read-only representation of existing protocol data.
+     * It does not create a database record or modify the protocol. Normal
+     * route model binding excludes soft-deleted protocols, and the same view
+     * authorization used by the protocol detail page is applied here.
+     */
+    public function receipt(
+        Protocol $protocol,
+        ApplicationSettings $settings
+    ): View
+    {
+        Gate::authorize('view', $protocol);
+
+        return view('protocols.receipt', [
+            'protocol' => $protocol,
+            'organizationName' => $settings->organizationName(),
+            'printedAt' => now(),
+        ]);
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Edit and Update a Protocol
     |--------------------------------------------------------------------------
     */

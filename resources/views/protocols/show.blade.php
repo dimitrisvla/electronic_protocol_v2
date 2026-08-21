@@ -14,6 +14,15 @@
                 {{ __('protocols.actions.back_to_protocols') }}
             </a>
 
+            <a
+                href="{{ route('protocols.receipt', $protocol) }}"
+                class="button button-secondary"
+                target="_blank"
+                rel="noopener"
+            >
+                {{ __('protocols.actions.print_receipt') }}
+            </a>
+
             @can('update', $protocol)
                 <a
                     href="{{ route('protocols.edit', $protocol) }}"
